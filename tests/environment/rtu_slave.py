@@ -47,7 +47,7 @@ class VendorSpecificRequest(ModbusRequest):
             raise IndexError
         return 1 + 1 + 1 + buffer[2] + 2
 
-    async def execute(self, context):
+    def execute(self, context):
         return VendorSpecificResponse(data=self.data)
 
 
