@@ -113,7 +113,10 @@ logw(int level, char *fmt, ...)
   p = str + strsize;
   strsize += vsnprintf(p, INTBUFSIZE - strsize, fmt, args);
   va_end(args);
-  strcpy(str + strsize++, "\n");
+  if (strsize > INTBUFSIZE - 1)
+    strsize = INTBUFSIZE - 1;
+  str[strsize++] = '\n';
+  str[strsize] = '\0';
   if (!isdaemon) fprintf(stderr, "%s", str);
   if (*logfullname == '\0') return;
   log_app(logfullname, str);
