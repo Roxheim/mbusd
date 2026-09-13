@@ -506,13 +506,23 @@ tty_set_rx(int fd)
 void
 tty_delay(int usec)
 {
-  struct timeval tv, ttv;
-  long ts;
-  gettimeofday(&tv, NULL);
-  do
+  struct timespec req, rem;
+  if (usec <= 0 || tty_break)
+    return;
+  req.tv_sec = usec / 1000000;
+  req.tv_nsec = (long)(usec % 1000000) * 1000L;
+  while (nanosleep(&req, &rem) == -1)
   {
-    (void)gettimeofday(&ttv, NULL);
-    ts = 1000000l * (ttv.tv_sec - tv.tv_sec) + (ttv.tv_usec - tv.tv_usec);
-  } while (ts < usec && !tty_break);
+    if (errno == EINTR)
+    {
+      if (tty_break)
+        break;
+      req = rem;
+    }
+    else
+    {
+      break;
+    }
+  }
 }
 
