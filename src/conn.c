@@ -52,6 +52,21 @@ void conn_fix_request_header_len(conn_t *conn, unsigned char len);
 
 #define FD_MSET(d, s) do { FD_SET(d, s); max_sd = MAX(d, max_sd); } while (0);
 
+#ifdef DEBUG
+static void
+fmt_packet(char *dest, size_t dest_size, const unsigned char *buf, size_t start, size_t count)
+{
+  size_t i;
+  char v[5];
+
+  dest[0] = '\0';
+  for (i = start; i < start + count; i++) {
+    sprintf(v, "[%2.2x]", buf[i]);
+    strncat(dest, v, dest_size - 1 - strlen(dest));
+  }
+}
+#endif
+
 int tty_reopen()
 {
   logw(3, "tty re-opening...");
@@ -307,7 +322,7 @@ conn_loop(void)
   unsigned long tval, tout_sec, tout = 0ul;
   conn_t *curconn = NULL;
 #ifdef DEBUG
-  char t[1025], v[5];
+  char t[1025];
 #endif
 
   while (TRUE)
@@ -444,11 +459,7 @@ conn_loop(void)
 #ifdef DEBUG
                 logw(5, "tty: response is correct");
                 // Optionally print the correct packet data
-                t[0] = '\0';
-                for (i = 0; i < tty.ptrbuf; i++) {
-                  sprintf(v, "[%2.2x]", tty.rxbuf[i]);
-                  strncat(t, v, 1024-strlen(t));
-                }
+                fmt_packet(t, sizeof(t), tty.rxbuf, 0, tty.ptrbuf);
                 logw(9, "tty: response: %s", t);
 #endif
                 (void)memcpy((void *)(actconn->buf + HDRSIZE),
@@ -459,11 +470,7 @@ conn_loop(void)
               {
                 /* received response is incomplete or CRC failed */
 #ifdef DEBUG
-                t[0] = '\0';
-                for (i = 0; i < tty.ptrbuf; i++) {
-                  sprintf(v, "[%2.2x]", tty.rxbuf[i]);
-                  strncat(t, v, 1024-strlen(t));
-                }
+                fmt_packet(t, sizeof(t), tty.rxbuf, 0, tty.ptrbuf);
                 logw(5, "tty: response is incorrect: %s", t);
 #endif
                 if (!tty.trynum) {
@@ -727,11 +734,7 @@ conn_loop(void)
 #ifdef DEBUG
         logw(5, "tty: response is correct");
         // Optionally print the correct packet data
-        t[0] = '\0';
-        for (i = 0; i < tty.ptrbuf; i++) {
-          sprintf(v, "[%2.2x]", tty.rxbuf[i]);
-          strncat(t, v, 1024-strlen(t));
-        }
+        fmt_packet(t, sizeof(t), tty.rxbuf, 0, tty.ptrbuf);
         logw(9, "tty: response: %s", t);
 #endif
         (void)memcpy((void *)(actconn->buf + HDRSIZE),
@@ -744,11 +747,7 @@ conn_loop(void)
       } else {
         /* received response is incomplete or CRC failed */
 #ifdef DEBUG
-        t[0] = '\0';
-        for (i = 0; i < tty.ptrbuf; i++) {
-          sprintf(v, "[%2.2x]", tty.rxbuf[i]);
-          strncat(t, v, 1024-strlen(t));
-        }
+        fmt_packet(t, sizeof(t), tty.rxbuf, 0, tty.ptrbuf);
         logw(5, "tty: response is incorrect: %s", t);
 #endif
         if (!tty.trynum) {
@@ -864,12 +863,7 @@ conn_loop(void)
               if (curconn->ctr >= HDRSIZE + MB_FRAME(curconn->buf, MB_LENGTH_L))
               { /* ### frame received completely ### */
 #ifdef DEBUG
-                t[0] = '\0';
-                int i;
-                for (i = MB_UNIT_ID; i < curconn->ctr; i++) {
-                  sprintf(v, "[%2.2x]", curconn->buf[i]);
-                  strncat(t, v, 1024-strlen(t));
-                }
+                fmt_packet(t, sizeof(t), curconn->buf, MB_UNIT_ID, curconn->ctr - MB_UNIT_ID);
                 logw(5, "conn[%s]: request: %s", curconn->remote_addr, t);
 #endif
                 state_conn_set(curconn, CONN_TTY);
